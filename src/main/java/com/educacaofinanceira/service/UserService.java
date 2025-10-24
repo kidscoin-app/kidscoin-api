@@ -4,9 +4,12 @@ import com.educacaofinanceira.dto.request.CreateChildRequest;
 import com.educacaofinanceira.dto.response.UserResponse;
 import com.educacaofinanceira.exception.ResourceNotFoundException;
 import com.educacaofinanceira.exception.UnauthorizedException;
-import com.educacaofinanceira.model.User;
+import com.educacaofinanceira.model.*;
 import com.educacaofinanceira.model.enums.UserRole;
+import com.educacaofinanceira.repository.SavingsRepository;
 import com.educacaofinanceira.repository.UserRepository;
+import com.educacaofinanceira.repository.UserXPRepository;
+import com.educacaofinanceira.repository.WalletRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,6 +26,9 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final WalletRepository walletRepository;
+    private final UserXPRepository userXPRepository;
+    private final SavingsRepository savingsRepository;
 
     // Retorna o usuário autenticado
     public UserResponse getCurrentUser() {
@@ -58,6 +64,30 @@ public class UserService {
         child.setPin(request.getPin());
         child.setAvatarUrl(request.getAvatarUrl());
         child = userRepository.save(child);
+
+        // Criar Wallet
+        Wallet wallet = new Wallet();
+        wallet.setChild(child);
+        wallet.setBalance(0);
+        wallet.setTotalEarned(0);
+        wallet.setTotalSpent(0);
+        walletRepository.save(wallet);
+
+        // Criar UserXP
+        UserXP userXP = new UserXP();
+        userXP.setUser(child);
+        userXP.setCurrentLevel(1);
+        userXP.setCurrentXp(0);
+        userXP.setTotalXp(0);
+        userXPRepository.save(userXP);
+
+        // Criar Savings
+        Savings savings = new Savings();
+        savings.setChild(child);
+        savings.setBalance(0);
+        savings.setTotalDeposited(0);
+        savings.setTotalEarned(0);
+        savingsRepository.save(savings);
 
         return UserResponse.fromUser(child);
     }
