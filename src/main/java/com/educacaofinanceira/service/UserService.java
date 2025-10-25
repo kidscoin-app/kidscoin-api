@@ -46,17 +46,14 @@ public class UserService {
             throw new UnauthorizedException("Apenas pais podem criar perfis de crianças");
         }
 
-        // Gera email automático para criança
-        String childEmail = generateChildEmail(parent, request.getFullName());
-
-        // Valida se email já existe (improvável, mas por segurança)
-        if (userRepository.existsByEmail(childEmail)) {
-            throw new IllegalArgumentException("Já existe um perfil com este nome");
+        // Valida se username já existe
+        if (userRepository.existsByUsername(request.getUsername())) {
+            throw new IllegalArgumentException("Username já está em uso");
         }
 
         // Cria a criança
         User child = new User();
-        child.setEmail(childEmail);
+        child.setUsername(request.getUsername());
         child.setPassword(passwordEncoder.encode(request.getPin())); // PIN vira senha
         child.setFullName(request.getFullName());
         child.setRole(UserRole.CHILD);
@@ -111,17 +108,11 @@ public class UserService {
 
     // Obtém o usuário autenticado
     private User getAuthenticatedUser() {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
-    }
+        String emailOrUsername = SecurityContextHolder.getContext().getAuthentication().getName();
 
-    // Gera email automático para criança
-    private String generateChildEmail(User parent, String childName) {
-        String cleanName = childName.toLowerCase()
-                .replaceAll("\\s+", ".")
-                .replaceAll("[^a-z.]", "");
-        String familyId = parent.getFamily().getId().toString().substring(0, 8);
-        return cleanName + "." + familyId + "@child.local";
+        // Tenta buscar por email primeiro (PARENT), depois por username (CHILD)
+        return userRepository.findByEmail(emailOrUsername)
+                .orElseGet(() -> userRepository.findByUsername(emailOrUsername)
+                        .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado")));
     }
 }

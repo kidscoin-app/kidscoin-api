@@ -19,9 +19,11 @@ public class CustomUserDetailsService implements UserDetailsService {
     private final UserRepository userRepository;
 
     @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado: " + email));
+    public UserDetails loadUserByUsername(String emailOrUsername) throws UsernameNotFoundException {
+        // Tenta buscar por email primeiro (PARENT), depois por username (CHILD)
+        User user = userRepository.findByEmail(emailOrUsername)
+                .orElseGet(() -> userRepository.findByUsername(emailOrUsername)
+                        .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado: " + emailOrUsername)));
 
         return buildUserDetails(user);
     }
@@ -36,8 +38,11 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     // Constrói UserDetails do Spring Security
     private UserDetails buildUserDetails(User user) {
+        // Usa email para PARENT, username para CHILD
+        String identifier = user.getEmail() != null ? user.getEmail() : user.getUsername();
+
         return org.springframework.security.core.userdetails.User.builder()
-                .username(user.getEmail())
+                .username(identifier)
                 .password(user.getPassword())
                 .authorities(Collections.singletonList(
                         new SimpleGrantedAuthority("ROLE_" + user.getRole().name())

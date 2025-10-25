@@ -21,11 +21,14 @@ public class User {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false, unique = true, length = 100)
-    private String email;
+    @Column(unique = true, length = 100)
+    private String email; // Apenas para PARENT
+
+    @Column(unique = true, length = 50)
+    private String username; // Apenas para CHILD
 
     @Column(nullable = false)
-    private String password; // BCrypt hash
+    private String password; // BCrypt hash (senha para PARENT, PIN para CHILD)
 
     @Column(nullable = false, length = 100)
     private String fullName;

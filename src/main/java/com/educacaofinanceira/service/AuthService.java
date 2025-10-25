@@ -67,11 +67,12 @@ public class AuthService {
 
     @Transactional
     public AuthResponse login(LoginRequest request) {
-        // Busca usuário por email
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new UnauthorizedException("Credenciais inválidas"));
+        // Busca usuário por email ou username
+        User user = userRepository.findByEmail(request.getEmailOrUsername())
+                .orElseGet(() -> userRepository.findByUsername(request.getEmailOrUsername())
+                        .orElseThrow(() -> new UnauthorizedException("Credenciais inválidas")));
 
-        // Valida senha
+        // Valida senha/PIN
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new UnauthorizedException("Credenciais inválidas");
         }
