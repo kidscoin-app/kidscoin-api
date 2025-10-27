@@ -1,5 +1,6 @@
 package com.educacaofinanceira.model;
 
+import com.educacaofinanceira.model.enums.RecurrenceType;
 import com.educacaofinanceira.model.enums.TaskCategory;
 import com.educacaofinanceira.model.enums.TaskStatus;
 import jakarta.persistence.*;
@@ -8,6 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -50,6 +52,29 @@ public class Task {
     @Column(nullable = false)
     private TaskStatus status;
 
+    // Campos de recorrência
+    @Column(nullable = false)
+    private Boolean isRecurring;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = true)
+    private RecurrenceType recurrenceType;
+
+    /**
+     * Dias da semana para recorrência semanal (separados por vírgula)
+     * Exemplo: "MON,WED,FRI" ou "TUE,THU"
+     * Valores possíveis: MON, TUE, WED, THU, FRI, SAT, SUN
+     */
+    @Column(length = 100, nullable = true)
+    private String recurrenceDays;
+
+    /**
+     * Data de término da recorrência (opcional)
+     * Se null, a tarefa é sempre ativa
+     */
+    @Column(nullable = true)
+    private LocalDate recurrenceEndDate;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -63,6 +88,9 @@ public class Task {
         updatedAt = LocalDateTime.now();
         if (status == null) {
             status = TaskStatus.ACTIVE;
+        }
+        if (isRecurring == null) {
+            isRecurring = false;
         }
     }
 
