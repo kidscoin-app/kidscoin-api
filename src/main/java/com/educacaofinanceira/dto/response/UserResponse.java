@@ -10,6 +10,7 @@ public class UserResponse {
 
     private UUID id;
     private String email;
+    private String username;
     private String fullName;
     private String role;
     private UUID familyId;
@@ -20,6 +21,7 @@ public class UserResponse {
         UserResponse response = new UserResponse();
         response.setId(user.getId());
         response.setEmail(user.getEmail());
+        response.setUsername(user.getUsername());
         response.setFullName(user.getFullName());
         response.setRole(user.getRole().name());
         response.setFamilyId(user.getFamily().getId());

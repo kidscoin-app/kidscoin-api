@@ -55,6 +55,13 @@ public class TaskService {
         task.setCoinValue(request.getCoinValue());
         task.setXpValue(request.getXpValue());
         task.setCategory(request.getCategory());
+
+        // Configurar recorrência
+        task.setIsRecurring(request.getIsRecurring() != null ? request.getIsRecurring() : false);
+        task.setRecurrenceType(request.getRecurrenceType());
+        task.setRecurrenceDays(request.getRecurrenceDays());
+        task.setRecurrenceEndDate(request.getRecurrenceEndDate());
+
         task = taskRepository.save(task);
 
         // Criar TaskAssignments para cada criança
@@ -87,6 +94,7 @@ public class TaskService {
      * - PARENT: todas as assignments da família
      * - CHILD: apenas suas próprias assignments
      */
+    @Transactional(readOnly = true)
     public List<TaskAssignmentResponse> getTasks(User user) {
         List<TaskAssignment> assignments;
 
@@ -97,10 +105,8 @@ public class TaskService {
             // Buscar todos os assignments dessas tasks
             assignments = new ArrayList<>();
             for (Task task : familyTasks) {
-                List<TaskAssignment> taskAssignments = taskAssignmentRepository.findByStatus(null);
-                assignments.addAll(taskAssignments.stream()
-                        .filter(a -> a.getTask().getId().equals(task.getId()))
-                        .collect(Collectors.toList()));
+                List<TaskAssignment> taskAssignments = taskAssignmentRepository.findByTaskId(task.getId());
+                assignments.addAll(taskAssignments);
             }
         } else {
             // Criança vê apenas suas próprias assignments
@@ -235,5 +241,73 @@ public class TaskService {
                 ReferenceType.TASK, assignmentId);
 
         return TaskAssignmentResponse.fromAssignment(assignment);
+    }
+
+    /**
+     * Criança tenta novamente uma tarefa rejeitada
+     * REJECTED → PENDING + limpa campos de aprovação/rejeição
+     */
+    @Transactional
+    public TaskAssignmentResponse retryTask(UUID assignmentId, User child) {
+        TaskAssignment assignment = taskAssignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Tarefa não encontrada"));
+
+        // Validar que é a criança atribuída
+        if (!assignment.getAssignedToChild().getId().equals(child.getId())) {
+            throw new UnauthorizedException("Você não tem permissão para tentar novamente esta tarefa");
+        }
+
+        // Validar status (deve estar REJECTED)
+        if (assignment.getStatus() != AssignmentStatus.REJECTED) {
+            throw new IllegalStateException("Apenas tarefas rejeitadas podem ser tentadas novamente");
+        }
+
+        // Resetar para PENDING e limpar campos
+        assignment.setStatus(AssignmentStatus.PENDING);
+        assignment.setCompletedAt(null);
+        assignment.setApprovedAt(null);
+        assignment.setApprovedBy(null);
+        assignment.setRejectionReason(null);
+        assignment = taskAssignmentRepository.save(assignment);
+
+        return TaskAssignmentResponse.fromAssignment(assignment);
+    }
+
+    /**
+     * Exclui uma tarefa atribuída (apenas PARENT)
+     * Só pode excluir se status for PENDING ou REJECTED
+     */
+    @Transactional
+    public void deleteTaskAssignment(UUID assignmentId, User parent) {
+        TaskAssignment assignment = taskAssignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Tarefa não encontrada"));
+
+        // Validar que é pai da família
+        if (parent.getRole() != UserRole.PARENT ||
+            !assignment.getTask().getFamily().getId().equals(parent.getFamily().getId())) {
+            throw new UnauthorizedException("Você não tem permissão para excluir esta tarefa");
+        }
+
+        // Validar status - não pode excluir tarefas aprovadas ou completadas
+        if (assignment.getStatus() == AssignmentStatus.APPROVED) {
+            throw new IllegalStateException("Não é possível excluir uma tarefa já aprovada");
+        }
+
+        if (assignment.getStatus() == AssignmentStatus.COMPLETED) {
+            throw new IllegalStateException("Não é possível excluir uma tarefa aguardando aprovação");
+        }
+
+        // Notificar criança se tarefa já estava atribuída
+        UUID childId = assignment.getAssignedToChild().getId();
+        String taskTitle = assignment.getTask().getTitle();
+
+        // Excluir assignment
+        taskAssignmentRepository.delete(assignment);
+
+        // Notificar criança da remoção
+        notificationService.create(childId, NotificationType.TASK_ASSIGNED,
+                "Tarefa removida",
+                "A tarefa '" + taskTitle + "' foi removida pelo responsável",
+                null, null);
     }
 }

@@ -3,6 +3,8 @@ package com.educacaofinanceira.repository;
 import com.educacaofinanceira.model.TaskAssignment;
 import com.educacaofinanceira.model.enums.AssignmentStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -13,6 +15,8 @@ import java.util.UUID;
 public interface TaskAssignmentRepository extends JpaRepository<TaskAssignment, UUID> {
 
     List<TaskAssignment> findByAssignedToChildId(UUID childId);
+
+    List<TaskAssignment> findByTaskId(UUID taskId);
 
     List<TaskAssignment> findByStatus(AssignmentStatus status);
 
@@ -38,5 +42,21 @@ public interface TaskAssignmentRepository extends JpaRepository<TaskAssignment, 
         AssignmentStatus status,
         LocalDateTime start,
         LocalDateTime end
+    );
+
+    /**
+     * Verifica se já existe um assignment PENDING ou COMPLETED para uma tarefa e criança
+     * criado no dia atual (usado para tarefas recorrentes)
+     */
+    @Query("SELECT CASE WHEN COUNT(ta) > 0 THEN true ELSE false END FROM TaskAssignment ta " +
+           "WHERE ta.task.id = :taskId " +
+           "AND ta.assignedToChild.id = :childId " +
+           "AND ta.status IN ('PENDING', 'COMPLETED') " +
+           "AND ta.createdAt >= :startOfDay AND ta.createdAt < :endOfDay")
+    boolean existsActiveAssignmentForTaskAndChildToday(
+        @Param("taskId") UUID taskId,
+        @Param("childId") UUID childId,
+        @Param("startOfDay") LocalDateTime startOfDay,
+        @Param("endOfDay") LocalDateTime endOfDay
     );
 }

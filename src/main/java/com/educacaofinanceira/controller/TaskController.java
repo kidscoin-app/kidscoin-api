@@ -77,4 +77,26 @@ public class TaskController {
                 assignmentId, request.getRejectionReason(), parent);
         return ResponseEntity.ok(task);
     }
+
+    /**
+     * Tenta novamente uma tarefa rejeitada (apenas CHILD)
+     * REJECTED → PENDING + limpa campos
+     */
+    @PutMapping("/assignments/{assignmentId}/retry")
+    public ResponseEntity<TaskAssignmentResponse> retryTask(@PathVariable UUID assignmentId) {
+        User child = securityHelper.getAuthenticatedUser();
+        TaskAssignmentResponse task = taskService.retryTask(assignmentId, child);
+        return ResponseEntity.ok(task);
+    }
+
+    /**
+     * Exclui tarefa atribuída (apenas PARENT)
+     * Só pode excluir tarefas com status PENDING ou REJECTED
+     */
+    @DeleteMapping("/{assignmentId}")
+    public ResponseEntity<Void> deleteTask(@PathVariable UUID assignmentId) {
+        User parent = securityHelper.getAuthenticatedUser();
+        taskService.deleteTaskAssignment(assignmentId, parent);
+        return ResponseEntity.noContent().build();
+    }
 }

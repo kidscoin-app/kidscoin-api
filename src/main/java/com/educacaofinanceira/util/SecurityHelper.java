@@ -6,6 +6,7 @@ import com.educacaofinanceira.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Helper para acessar informações do usuário autenticado
@@ -18,10 +19,17 @@ public class SecurityHelper {
 
     /**
      * Retorna o usuário autenticado atualmente
+     * Busca por email (PARENT) ou username (CHILD)
+     * Usa JOIN FETCH para carregar Family EAGER, evitando LazyInitializationException
      */
+    @Transactional(readOnly = true)
     public User getAuthenticatedUser() {
-        String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
+        String emailOrUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        // Tenta buscar por email primeiro (PARENT), depois por username (CHILD)
+        // Usa métodos com JOIN FETCH para carregar Family junto com User
+        return userRepository.findByEmailWithFamily(emailOrUsername)
+                .orElseGet(() -> userRepository.findByUsernameWithFamily(emailOrUsername)
+                        .orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado")));
     }
 }
