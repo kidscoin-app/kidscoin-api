@@ -85,6 +85,11 @@ public class RedemptionService {
                     ReferenceType.REWARD, redemption.getId());
         }
 
+        // Forçar carregamento de relacionamentos lazy dentro da transação
+        redemption.getReward().getCreatedBy().getFullName();
+        redemption.getReward().getFamily().getId();
+        redemption.getChild().getFullName();
+
         return RedemptionResponse.fromRedemption(redemption);
     }
 
@@ -93,6 +98,7 @@ public class RedemptionService {
      * - PARENT: todos os resgates da família
      * - CHILD: apenas seus próprios resgates
      */
+    @Transactional(readOnly = true)
     public List<RedemptionResponse> getRedemptions(User user, RedemptionStatus status) {
         List<Redemption> redemptions;
 
@@ -117,6 +123,16 @@ public class RedemptionService {
                         .collect(Collectors.toList());
             }
         }
+
+        // Forçar carregamento de relacionamentos lazy dentro da transação
+        redemptions.forEach(redemption -> {
+            redemption.getReward().getCreatedBy().getFullName();
+            redemption.getReward().getFamily().getId();
+            redemption.getChild().getFullName();
+            if (redemption.getReviewedBy() != null) {
+                redemption.getReviewedBy().getFullName();
+            }
+        });
 
         return redemptions.stream()
                 .map(RedemptionResponse::fromRedemption)
@@ -167,6 +183,12 @@ public class RedemptionService {
                 "Seu resgate foi aprovado: " + redemption.getReward().getName(),
                 ReferenceType.REWARD, redemptionId);
 
+        // Forçar carregamento de relacionamentos lazy dentro da transação
+        redemption.getReward().getCreatedBy().getFullName();
+        redemption.getReward().getFamily().getId();
+        redemption.getChild().getFullName();
+        redemption.getReviewedBy().getFullName();
+
         return RedemptionResponse.fromRedemption(redemption);
     }
 
@@ -204,6 +226,12 @@ public class RedemptionService {
                 "Seu resgate foi rejeitado: " + redemption.getReward().getName() +
                         ". Motivo: " + rejectionReason,
                 ReferenceType.REWARD, redemptionId);
+
+        // Forçar carregamento de relacionamentos lazy dentro da transação
+        redemption.getReward().getCreatedBy().getFullName();
+        redemption.getReward().getFamily().getId();
+        redemption.getChild().getFullName();
+        redemption.getReviewedBy().getFullName();
 
         return RedemptionResponse.fromRedemption(redemption);
     }
