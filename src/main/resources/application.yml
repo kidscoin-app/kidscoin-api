@@ -18,6 +18,11 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
     open-in-view: false
 
+  sql:
+    init:
+      mode: always # Executa data.sql na inicialização
+      continue-on-error: true # Continua mesmo se houver erro (ex: badges já existem)
+
   jackson:
     default-property-inclusion: non_null
     serialization:
