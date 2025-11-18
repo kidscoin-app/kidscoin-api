@@ -48,4 +48,16 @@ public class GamificationController {
         String result = gamificationService.unlockBadgeForTest(request.getUsername(), request.getBadgeName());
         return ResponseEntity.ok(result);
     }
+
+    /**
+     * 🔧 DEBUG: Corrige badge Milionário com problema de encoding
+     * ⚠️ REMOVER ANTES DE PRODUÇÃO FINAL!
+     *
+     * GET /api/gamification/debug/fix-milionario
+     */
+    @GetMapping("/debug/fix-milionario")
+    public ResponseEntity<String> fixMilionarioBadge() {
+        String result = gamificationService.fixMilionarioBadge();
+        return ResponseEntity.ok(result);
+    }
 }

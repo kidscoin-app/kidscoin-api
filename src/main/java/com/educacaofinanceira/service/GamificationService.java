@@ -132,6 +132,31 @@ public class GamificationService {
     }
 
     /**
+     * 🔧 DEBUG: Corrige badge Milionário com problema de encoding
+     * ⚠️ REMOVER ANTES DE PRODUÇÃO FINAL!
+     */
+    @Transactional
+    public String fixMilionarioBadge() {
+        List<Badge> allBadges = badgeRepository.findAll();
+
+        // Buscar badge com nome contendo "Milion" (pega o corrompido)
+        Badge milionarioBadge = allBadges.stream()
+                .filter(b -> b.getName().contains("Milion"))
+                .findFirst()
+                .orElse(null);
+
+        if (milionarioBadge == null) {
+            return "❌ Badge Milionário não encontrada no banco";
+        }
+
+        String oldName = milionarioBadge.getName();
+        milionarioBadge.setName("Milionario");
+        badgeRepository.save(milionarioBadge);
+
+        return "✅ Badge corrigida! Nome antigo: '" + oldName + "' → Novo: 'Milionario'";
+    }
+
+    /**
      * 🔧 DEBUG: Desbloqueia uma badge manualmente para testes
      * ⚠️ REMOVER ANTES DE PRODUÇÃO FINAL!
      */

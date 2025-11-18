@@ -89,7 +89,7 @@ SELECT * FROM (
 
     SELECT
         gen_random_uuid(),
-        'Milionário',
+        'Milionario',
         'Ganhe 1000 moedas no total',
         'crown',
         'TOTAL_COINS_EARNED',
