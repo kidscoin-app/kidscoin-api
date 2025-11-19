@@ -2013,9 +2013,213 @@ Ou simplesmente comentar o endpoint:
 
 ---
 
-**Última atualização:** 18/11/2025 - Feature de debug para desbloquear badges
-**Status:** ✅ **Sistema 100% FUNCIONAL + PRONTO PARA DEMONSTRAÇÃO**
+---
+
+## 🐛 CORREÇÕES E MELHORIAS - 18/11/2025 (Sessão 2)
+
+### ✅ Correção #1: Spring Security Bloqueando Endpoint de Debug
+
+**Problema:** Endpoint `/api/gamification/debug/unlock` retornava **403 Forbidden**.
+
+**Causa:** Spring Security exigia autenticação JWT para todos os endpoints exceto `/api/auth/**`.
+
+**Solução:**
+```java
+// SecurityConfig.java
+.requestMatchers("/api/gamification/debug/**").permitAll()
+```
+
+**Commit:** `13a7510 - fix: libera endpoint de debug de badges no Spring Security`
+
+---
+
+### ✅ Correção #2: Seeds de Badges Não Executavam
+
+**Problema:** Railway não tinha badges no banco. Endpoint retornava "Badges disponíveis: " (vazio).
+
+**Causa:** Spring Boot 3+ não executa `data.sql` automaticamente com Hibernate.
+
+**Solução:**
+```yaml
+# application.yml
+spring:
+  sql:
+    init:
+      mode: always # Executa data.sql na inicialização
+      continue-on-error: true # Continua se badges já existem
+```
+
+**Commit:** `63adf66 - fix: ativa execucao automatica do data.sql para criar badges`
+
+**Resultado:** As 8 badges foram criadas automaticamente no Railway após redeploy.
+
+---
+
+### ✅ Correção #3: Problema de Encoding UTF-8 na Badge "Milionário"
+
+**Problema Identificado:**
+
+1. No Railway, badge aparecia como "Milio??río" (caractere corrompido)
+2. No frontend mobile, aparecia "Milio??rio"
+3. Script PowerShell falhava ao tentar desbloquear "Milionario" (sem acento)
+
+**Causa Raiz:**
+
+O arquivo `data.sql` tinha encoding incorreto ao salvar o acento "á" em "Milionário". O PostgreSQL do Railway salvou com caracteres corrompidos.
+
+**Solução Implementada:**
+
+**1. Removido acento do `data.sql`:**
+```sql
+-- Antes:
+'Milionário',
+
+-- Depois:
+'Milionario',
+```
+
+**2. Criado endpoint de correção para banco existente:**
+```java
+// GamificationController.java
+@GetMapping("/debug/fix-milionario")
+public ResponseEntity<String> fixMilionarioBadge()
+
+// GamificationService.java
+public String fixMilionarioBadge() {
+    // Busca badge com nome contendo "Milion"
+    // Renomeia para "Milionario" (sem acento)
+    // Salva no banco
+}
+```
+
+**3. Atualizado script PowerShell:**
+```powershell
+# Antes:
+"Milionário"
+
+# Depois:
+"Milionario"
+```
+
+**Como Usar o Endpoint de Correção:**
+```powershell
+# Executar UMA VEZ após deploy (corrige registro existente):
+Invoke-RestMethod -Uri "https://sua-api.railway.app/api/gamification/debug/fix-milionario"
+
+# Resposta:
+✅ Badge corrigida! Nome antigo: 'Milio??rio' → Novo: 'Milionario'
+```
+
+**Commit:** `bad158c - fix: corrige encoding UTF-8 da badge Milionario`
+
+**Resultado:**
+- ✅ Badge salva corretamente no banco (sem caracteres corrompidos)
+- ✅ Frontend exibe "Milionario" sem "??"
+- ✅ Script desbloqueia com sucesso
+
+---
+
+### 📊 Resumo da Sessão
+
+**Problemas Resolvidos:**
+1. ✅ Endpoint bloqueado por Spring Security (403)
+2. ✅ Badges não eram criadas no Railway (data.sql não executava)
+3. ✅ Encoding UTF-8 corrompido na badge "Milionário"
+
+**Commits:**
+- `004bdad` - feat: adiciona endpoint de debug para desbloquear badges manualmente
+- `13a7510` - fix: libera endpoint de debug de badges no Spring Security
+- `63adf66` - fix: ativa execucao automatica do data.sql para criar badges
+- `bad158c` - fix: corrige encoding UTF-8 da badge Milionario
+
+**Arquivos Modificados:**
+- `SecurityConfig.java` - Liberado `/api/gamification/debug/**`
+- `application.yml` - Configurado `sql.init.mode: always`
+- `data.sql` - Removido acento de "Milionário"
+- `unlock-all-badges.ps1` - Atualizado para "Milionario"
+- `GamificationController.java` - Adicionado endpoint `/debug/fix-milionario`
+- `GamificationService.java` - Adicionado método `fixMilionarioBadge()`
+
+---
+
+### 🎯 Endpoint de Debug em Produção
+
+**Status:** ✅ **FUNCIONANDO** no Railway
+
+**Uso:**
+
+**1. Desbloquear 1 badge:**
+```powershell
+Invoke-RestMethod `
+  -Uri "https://kidscoin-api-production.up.railway.app/api/gamification/debug/unlock" `
+  -Method POST `
+  -ContentType "application/json" `
+  -Body '{"username":"yugi123","badgeName":"Primeira Tarefa"}'
+```
+
+**2. Desbloquear TODAS as 8 badges:**
+```powershell
+cd F:\Dev\kidscoin\kidscoin-api\scripts
+.\unlock-all-badges.ps1 `
+  -Username "yugi123" `
+  -ApiUrl "https://kidscoin-api-production.up.railway.app/api"
+```
+
+**3. Corrigir badge com encoding corrompido:**
+```powershell
+Invoke-RestMethod `
+  -Uri "https://kidscoin-api-production.up.railway.app/api/gamification/debug/fix-milionario"
+```
+
+**Resultado Esperado:**
+```
+Desbloqueando: Primeira Tarefa... OK
+Desbloqueando: Poupador Iniciante... OK
+Desbloqueando: Trabalhador Dedicado... OK
+Desbloqueando: Dia Produtivo... OK
+Desbloqueando: Consistente... OK
+Desbloqueando: Planejador... OK
+Desbloqueando: Comprador Consciente... OK
+Desbloqueando: Milionario... OK
+
+==================================================
+Badges desbloqueadas: 8
+XP Total Ganho: +725 XP
+==================================================
+```
+
+---
+
+### ⚠️ Lembrete: Remover Antes da Entrega Final
+
+Endpoints e arquivos temporários para **REMOVER ou COMENTAR** antes da apresentação do TCC:
+
+**Backend:**
+- [ ] `GamificationController.java` - Endpoints `/debug/unlock` e `/debug/fix-milionario`
+- [ ] `GamificationService.java` - Métodos `unlockBadgeForTest()` e `fixMilionarioBadge()`
+- [ ] `UnlockBadgeDebugRequest.java` - DTO de debug
+- [ ] `SecurityConfig.java` - Linha `.requestMatchers("/api/gamification/debug/**").permitAll()`
+
+**Scripts:**
+- [ ] `scripts/unlock-all-badges.ps1`
+- [ ] `scripts/unlock-all-badges.sh`
+- [ ] `scripts/README.md`
+
+**Documentação:**
+- [ ] `docs/DEBUG_UNLOCK_BADGES.md`
+
+**Forma rápida:** Apenas comentar os endpoints:
+```java
+// @PostMapping("/debug/unlock")
+// @GetMapping("/debug/fix-milionario")
+```
+
+---
+
+**Última atualização:** 18/11/2025 - Correções de encoding e configuração
+**Status:** ✅ **Sistema 100% FUNCIONAL EM PRODUÇÃO**
 **Compilação:** 96 arquivos | BUILD SUCCESS
-**Commits totais:** 39 commits (12 Parte 1 + 27 Parte 2)
-**Deploy:** 🚀 Pronto para Railway + Endpoint de debug ativo
-**GitHub:** ⏳ Aguardando commit
+**Commits totais:** 42 commits (12 Parte 1 + 30 Parte 2)
+**Deploy:** 🚀 **ATIVO no Railway** (commit `bad158c`)
+**Badges:** ✅ Todas as 8 funcionando (incluindo correção de encoding)
+**GitHub:** ✅ Sincronizado
