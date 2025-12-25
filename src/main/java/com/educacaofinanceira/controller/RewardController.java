@@ -52,4 +52,14 @@ public class RewardController {
         RewardResponse reward = rewardService.toggleRewardStatus(rewardId, parent);
         return ResponseEntity.ok(reward);
     }
+
+    /**
+     * Deleta uma recompensa (apenas PARENT)
+     */
+    @DeleteMapping("/{rewardId}")
+    public ResponseEntity<Void> deleteReward(@PathVariable UUID rewardId) {
+        User parent = securityHelper.getAuthenticatedUser();
+        rewardService.deleteReward(rewardId, parent);
+        return ResponseEntity.noContent().build();
+    }
 }

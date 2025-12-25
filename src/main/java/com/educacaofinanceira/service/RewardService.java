@@ -96,4 +96,22 @@ public class RewardService {
 
         return RewardResponse.fromReward(reward);
     }
+
+    /**
+     * Deleta uma recompensa (apenas PARENT)
+     */
+    @Transactional
+    public void deleteReward(UUID rewardId, User parent) {
+        Reward reward = rewardRepository.findById(rewardId)
+                .orElseThrow(() -> new IllegalArgumentException("Recompensa não encontrada"));
+
+        // Validar acesso
+        if (parent.getRole() != UserRole.PARENT ||
+            !reward.getFamily().getId().equals(parent.getFamily().getId())) {
+            throw new UnauthorizedException("Você não tem permissão para deletar esta recompensa");
+        }
+
+        // Deletar recompensa
+        rewardRepository.delete(reward);
+    }
 }
