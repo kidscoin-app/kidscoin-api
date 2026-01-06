@@ -38,7 +38,7 @@ public class RedemptionService {
 
     /**
      * Criança solicita resgate de recompensa
-     * Moedas NÃO são debitadas neste momento (apenas na aprovação)
+     * Moedas SÃO debitadas IMEDIATAMENTE neste momento
      */
     @Transactional
     public RedemptionResponse requestRedemption(CreateRedemptionRequest request, User child) {
@@ -56,7 +56,7 @@ public class RedemptionService {
             throw new IllegalStateException("Esta recompensa não está mais disponível");
         }
 
-        // Validar saldo (mesmo sem debitar, avisar se não tem)
+        // Validar saldo
         Wallet wallet = walletRepository.findByChildId(child.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Carteira não encontrada"));
 
@@ -65,11 +65,18 @@ public class RedemptionService {
                     reward.getCoinCost() + " moedas, mas tem apenas " + wallet.getBalance());
         }
 
+        // DEBITAR MOEDAS IMEDIATAMENTE
+        Integer coinCost = reward.getCoinCost();
+        walletService.debit(child.getId(), coinCost,
+                "Resgate solicitado: " + reward.getName(),
+                ReferenceType.REWARD, null); // referenceId será atualizado depois
+
         // Criar Redemption PENDING
         Redemption redemption = new Redemption();
         redemption.setReward(reward);
         redemption.setChild(child);
         redemption.setStatus(RedemptionStatus.PENDING);
+        redemption.setCoinAmount(coinCost); // Guardar valor debitado
         redemption = redemptionRepository.save(redemption);
 
         // Notificar pais da família
@@ -141,7 +148,7 @@ public class RedemptionService {
 
     /**
      * Pai aprova resgate
-     * AGORA debita as moedas
+     * Moedas NÃO são debitadas (já foram debitadas no momento do pedido)
      */
     @Transactional
     public RedemptionResponse approveRedemption(UUID redemptionId, User parent) {
@@ -159,17 +166,7 @@ public class RedemptionService {
             throw new IllegalStateException("Este resgate não está pendente");
         }
 
-        // Debitar moedas
         UUID childId = redemption.getChild().getId();
-        Integer coinCost = redemption.getReward().getCoinCost();
-
-        try {
-            walletService.debit(childId, coinCost,
-                    "Resgate aprovado: " + redemption.getReward().getName(),
-                    ReferenceType.REWARD, redemptionId);
-        } catch (IllegalArgumentException e) {
-            throw new IllegalStateException("Não foi possível aprovar: " + e.getMessage());
-        }
 
         // Atualizar redemption
         redemption.setStatus(RedemptionStatus.APPROVED);
@@ -194,7 +191,7 @@ public class RedemptionService {
 
     /**
      * Pai rejeita resgate
-     * Moedas NÃO são debitadas
+     * Moedas são DEVOLVIDAS para a criança
      */
     @Transactional
     public RedemptionResponse rejectRedemption(UUID redemptionId, String rejectionReason, User parent) {
@@ -212,6 +209,13 @@ public class RedemptionService {
             throw new IllegalStateException("Este resgate não está pendente");
         }
 
+        UUID childId = redemption.getChild().getId();
+
+        // DEVOLVER MOEDAS para a criança
+        walletService.credit(childId, redemption.getCoinAmount(),
+                "Resgate rejeitado: " + redemption.getReward().getName() + " - Moedas devolvidas",
+                ReferenceType.REWARD, redemptionId);
+
         // Atualizar redemption
         redemption.setStatus(RedemptionStatus.REJECTED);
         redemption.setReviewedAt(LocalDateTime.now());
@@ -220,11 +224,10 @@ public class RedemptionService {
         redemption = redemptionRepository.save(redemption);
 
         // Notificar criança
-        UUID childId = redemption.getChild().getId();
         notificationService.create(childId, NotificationType.REDEMPTION_REJECTED,
                 "Resgate rejeitado",
                 "Seu resgate foi rejeitado: " + redemption.getReward().getName() +
-                        ". Motivo: " + rejectionReason,
+                        ". Motivo: " + rejectionReason + ". Suas moedas foram devolvidas!",
                 ReferenceType.REWARD, redemptionId);
 
         // Forçar carregamento de relacionamentos lazy dentro da transação

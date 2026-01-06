@@ -15,6 +15,7 @@ public class RedemptionResponse {
     private UUID childId;
     private String childName;
     private RedemptionStatus status;
+    private Integer coinAmount; // Quantidade de moedas debitadas no pedido
     private LocalDateTime requestedAt;
     private LocalDateTime reviewedAt;
     private String reviewedByName;
@@ -27,6 +28,7 @@ public class RedemptionResponse {
         response.setChildId(redemption.getChild().getId());
         response.setChildName(redemption.getChild().getFullName());
         response.setStatus(redemption.getStatus());
+        response.setCoinAmount(redemption.getCoinAmount());
         response.setRequestedAt(redemption.getRequestedAt());
         response.setReviewedAt(redemption.getReviewedAt());
         if (redemption.getReviewedBy() != null) {
