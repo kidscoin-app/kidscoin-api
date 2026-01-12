@@ -12,9 +12,11 @@ public class SavingsResponse {
     private UUID id;
     private UUID childId;
     private String childName;
-    private Integer balance;
+    private Integer balance; // Principal (sem juros acumulados)
+    private Integer availableBalance; // Total disponível (principal + juros acumulados não realizados)
+    private Integer pendingInterest; // Juros acumulados não realizados
     private Integer totalDeposited;
-    private Integer totalEarned;
+    private Integer totalEarned; // Juros já realizados (de saques anteriores)
     private LocalDateTime lastDepositAt;
 
     public static SavingsResponse fromSavings(Savings savings) {
@@ -26,6 +28,7 @@ public class SavingsResponse {
         response.setTotalDeposited(savings.getTotalDeposited());
         response.setTotalEarned(savings.getTotalEarned());
         response.setLastDepositAt(savings.getLastDepositAt());
+        // availableBalance e pendingInterest serão definidos pelo service
         return response;
     }
 }
