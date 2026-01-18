@@ -11,10 +11,10 @@ spring:
   jpa:
     hibernate:
       ddl-auto: ${HIBERNATE_DDL_AUTO:update}
-    show-sql: ${SHOW_SQL:true}
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
         dialect: org.hibernate.dialect.PostgreSQLDialect
     open-in-view: false
 
@@ -37,9 +37,13 @@ jwt:
 # Logging
 logging:
   level:
-    com.educacaofinanceira: ${LOG_LEVEL:DEBUG}
-    org.springframework.security: ${LOG_LEVEL:DEBUG}
-    org.hibernate.SQL: ${LOG_LEVEL:DEBUG}
+    root: WARN
+    com.educacaofinanceira: INFO
+    org.springframework.security: WARN
+    org.springframework.web: WARN
+    org.hibernate: WARN
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
   pattern:
     console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
 
