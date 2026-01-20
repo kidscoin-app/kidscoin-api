@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -115,6 +116,46 @@ public class GamificationService {
         }
 
         return new GamificationResult(leveledUp, newLevel, unlockedBadges);
+    }
+
+    /**
+     * Atualiza o streak de tarefas diárias de uma criança.
+     * - Se a última tarefa foi ontem: incrementa streak
+     * - Se a última tarefa foi hoje: mantém streak (já contabilizado)
+     * - Se passou mais de 1 dia: reseta streak para 1
+     * - Atualiza longestStreak se o atual ultrapassar o recorde
+     */
+    @Transactional
+    public void updateStreak(UUID childId) {
+        UserXP userXP = userXPRepository.findByUserId(childId)
+                .orElseThrow(() -> new ResourceNotFoundException("UserXP não encontrado"));
+
+        LocalDate today = LocalDate.now();
+        LocalDate lastTaskDate = userXP.getLastTaskCompletedDate();
+
+        if (lastTaskDate == null) {
+            // Primeira tarefa aprovada
+            userXP.setCurrentStreak(1);
+        } else if (lastTaskDate.equals(today)) {
+            // Já fez tarefa hoje, não incrementa (mantém streak)
+            return;
+        } else if (lastTaskDate.equals(today.minusDays(1))) {
+            // Fez tarefa ontem, incrementa streak
+            userXP.setCurrentStreak(userXP.getCurrentStreak() + 1);
+        } else {
+            // Passou mais de 1 dia sem fazer tarefa, reseta streak
+            userXP.setCurrentStreak(1);
+        }
+
+        // Atualiza recorde se necessário
+        if (userXP.getCurrentStreak() > userXP.getLongestStreak()) {
+            userXP.setLongestStreak(userXP.getCurrentStreak());
+        }
+
+        // Atualiza data da última tarefa
+        userXP.setLastTaskCompletedDate(today);
+
+        userXPRepository.save(userXP);
     }
 
     /**
@@ -226,6 +267,9 @@ public class GamificationService {
             xpForNextLevel = calculateXPForLevel(userXP.getCurrentLevel() + 1);
         }
 
+        // Calcular streak atual (verificar se precisa resetar)
+        int currentStreak = calculateCurrentStreak(userXP);
+
         // Buscar badges desbloqueadas
         List<UserBadge> userBadges = userBadgeRepository.findByUserId(childId);
         Map<UUID, LocalDateTime> unlockedBadgesMap = userBadges.stream()
@@ -249,7 +293,29 @@ public class GamificationService {
                 userXP.getCurrentXp(),
                 userXP.getTotalXp(),
                 xpForNextLevel,
+                currentStreak,
+                userXP.getLongestStreak(),
                 badgeResponses
         );
+    }
+
+    /**
+     * Calcula o streak atual considerando se já passou mais de 1 dia desde a última tarefa.
+     * Retorna 0 se o streak foi quebrado (mais de 1 dia sem tarefa).
+     */
+    private int calculateCurrentStreak(UserXP userXP) {
+        LocalDate lastTaskDate = userXP.getLastTaskCompletedDate();
+        if (lastTaskDate == null) {
+            return 0;
+        }
+
+        LocalDate today = LocalDate.now();
+        // Se a última tarefa foi hoje ou ontem, o streak ainda está ativo
+        if (lastTaskDate.equals(today) || lastTaskDate.equals(today.minusDays(1))) {
+            return userXP.getCurrentStreak();
+        }
+
+        // Passou mais de 1 dia, streak foi quebrado
+        return 0;
     }
 }

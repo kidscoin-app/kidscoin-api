@@ -195,7 +195,10 @@ public class TaskService {
         gamificationService.addXP(childId, task.getXpValue(),
                 "Tarefa aprovada: " + task.getTitle());
 
-        // 3. Notificar criança
+        // 3. Atualizar streak de tarefas diárias
+        gamificationService.updateStreak(childId);
+
+        // 4. Notificar criança
         notificationService.create(childId, NotificationType.TASK_APPROVED,
                 "Tarefa aprovada!",
                 "Você ganhou " + task.getCoinValue() + " moedas e " +

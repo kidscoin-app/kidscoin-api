@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -36,6 +37,15 @@ public class UserXP {
     @Column
     private LocalDateTime lastLevelUpAt;
 
+    @Column(nullable = false)
+    private Integer currentStreak = 0; // Streak atual de dias consecutivos
+
+    @Column(nullable = false)
+    private Integer longestStreak = 0; // Maior streak registrado (recorde)
+
+    @Column
+    private LocalDate lastTaskCompletedDate; // Data da última tarefa aprovada (para calcular streak)
+
     @UpdateTimestamp
     @Column(nullable = false)
     private LocalDateTime updatedAt;
@@ -46,6 +56,8 @@ public class UserXP {
         if (currentLevel == null) currentLevel = 1;
         if (currentXp == null) currentXp = 0;
         if (totalXp == null) totalXp = 0;
+        if (currentStreak == null) currentStreak = 0;
+        if (longestStreak == null) longestStreak = 0;
     }
 
     @PreUpdate
