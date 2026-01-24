@@ -37,10 +37,10 @@ public class UserXP {
     @Column
     private LocalDateTime lastLevelUpAt;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "integer default 0")
     private Integer currentStreak = 0; // Streak atual de dias consecutivos
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "integer default 0")
     private Integer longestStreak = 0; // Maior streak registrado (recorde)
 
     @Column
