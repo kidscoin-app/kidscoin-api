@@ -32,7 +32,7 @@ public class Redemption {
     @Column(nullable = false)
     private RedemptionStatus status;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "integer default 0")
     private Integer coinAmount; // Quantidade de moedas debitadas no momento do pedido
 
     @Column(nullable = false, updatable = false)
@@ -53,6 +53,9 @@ public class Redemption {
         requestedAt = LocalDateTime.now();
         if (status == null) {
             status = RedemptionStatus.PENDING;
+        }
+        if (coinAmount == null) {
+            coinAmount = 0;
         }
     }
 }
