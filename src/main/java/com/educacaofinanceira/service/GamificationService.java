@@ -191,10 +191,10 @@ public class GamificationService {
         }
 
         String oldName = milionarioBadge.getName();
-        milionarioBadge.setName("Milionario");
+        milionarioBadge.setName("Milionário");
         badgeRepository.save(milionarioBadge);
 
-        return "✅ Badge corrigida! Nome antigo: '" + oldName + "' → Novo: 'Milionario'";
+        return "✅ Badge corrigida! Nome antigo: '" + oldName + "' → Novo: 'Milionário'";
     }
 
     /**
