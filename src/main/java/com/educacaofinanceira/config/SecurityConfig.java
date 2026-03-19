@@ -1,6 +1,7 @@
 package com.educacaofinanceira.config;
 
 import com.educacaofinanceira.security.JwtAuthenticationFilter;
+import com.educacaofinanceira.security.RateLimitingFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,6 +23,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final RateLimitingFilter rateLimitingFilter;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -41,10 +43,11 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll() // Permite endpoints de auth sem autenticação
-                        .requestMatchers("/api/gamification/debug/**").permitAll() // DEBUG: Permite desbloquear badges sem auth
+                        .requestMatchers("/api/gamification/debug/**").authenticated() // DEBUG: requer autenticação
                         .anyRequest().authenticated() // Todo resto requer autenticação
                 )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(rateLimitingFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }

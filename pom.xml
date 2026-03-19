@@ -88,6 +88,13 @@
             <artifactId>jackson-datatype-hibernate5-jakarta</artifactId>
         </dependency>
 
+        <!-- Rate Limiting -->
+        <dependency>
+            <groupId>com.bucket4j</groupId>
+            <artifactId>bucket4j-core</artifactId>
+            <version>8.10.1</version>
+        </dependency>
+
         <!-- DevTools -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
