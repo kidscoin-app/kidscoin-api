@@ -5,7 +5,6 @@ import com.educacaofinanceira.dto.request.RefreshTokenRequest;
 import com.educacaofinanceira.dto.request.RegisterRequest;
 import com.educacaofinanceira.dto.response.AuthResponse;
 import com.educacaofinanceira.dto.response.UserResponse;
-import com.educacaofinanceira.exception.ResourceNotFoundException;
 import com.educacaofinanceira.exception.UnauthorizedException;
 import com.educacaofinanceira.model.Family;
 import com.educacaofinanceira.model.RefreshToken;
@@ -39,8 +38,10 @@ public class AuthService {
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
+        String normalizedEmail = request.getEmail().trim().toLowerCase();
+
         // Valida se email já existe
-        if (userRepository.existsByEmail(request.getEmail())) {
+        if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
             throw new IllegalArgumentException("Email já cadastrado");
         }
 
@@ -51,7 +52,7 @@ public class AuthService {
 
         // Cria o usuário PARENT
         User user = new User();
-        user.setEmail(request.getEmail());
+        user.setEmail(normalizedEmail);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setFullName(request.getFullName());
         user.setRole(UserRole.PARENT);
@@ -69,8 +70,9 @@ public class AuthService {
     public AuthResponse login(LoginRequest request) {
         // Busca usuário por email ou username
         // USA MÉTODOS COM JOIN FETCH para evitar LazyInitializationException
-        User user = userRepository.findByEmailWithFamily(request.getEmailOrUsername())
-                .orElseGet(() -> userRepository.findByUsernameWithFamily(request.getEmailOrUsername())
+        String normalizedIdentifier = request.getEmailOrUsername().trim().toLowerCase();
+        User user = userRepository.findByEmailWithFamily(normalizedIdentifier)
+                .orElseGet(() -> userRepository.findByUsernameWithFamily(normalizedIdentifier)
                         .orElseThrow(() -> new UnauthorizedException("Credenciais inválidas")));
 
         // Valida senha/PIN

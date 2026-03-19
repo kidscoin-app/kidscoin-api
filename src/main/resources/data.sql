@@ -1,3 +1,6 @@
+-- Garante índice único case-insensitive no email (segurança contra duplicatas)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_unique ON users (lower(email));
+
 -- Seeds de Badges (8 badges)
 -- Inserir apenas se a tabela estiver vazia
 
@@ -89,7 +92,7 @@ SELECT * FROM (
 
     SELECT
         gen_random_uuid(),
-        'Milionario',
+        'Milionário',
         'Ganhe 1000 moedas no total',
         'crown',
         'TOTAL_COINS_EARNED',
